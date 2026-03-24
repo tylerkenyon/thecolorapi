@@ -4,9 +4,9 @@ This module is now a **fully local Java 21 library**.
 
 It does not call `https://www.thecolorapi.com` for color computation. Instead, it ports the core JavaScript logic from:
 
-- `/home/runner/work/thecolorapi/thecolorapi/lib/colored.js`
-- `/home/runner/work/thecolorapi/thecolorapi/lib/schemer.js`
-- `/home/runner/work/thecolorapi/thecolorapi/lib/cutils.js`
+- `lib/colored.js`
+- `lib/schemer.js`
+- `lib/cutils.js`
 
 ## What is local now
 
@@ -25,7 +25,7 @@ It does not call `https://www.thecolorapi.com` for color computation. Instead, i
 
 ## Maven usage
 
-From `/home/runner/work/thecolorapi/thecolorapi/java`:
+From the `java/` directory:
 
 ```bash
 mvn clean test
