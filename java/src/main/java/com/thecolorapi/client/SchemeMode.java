@@ -1,5 +1,10 @@
 package com.thecolorapi.client;
 
+/**
+ * Supported scheme modes.
+ *
+ * <p>The string values map to route-compatible mode keys from the legacy API implementation.</p>
+ */
 public enum SchemeMode {
   MONOCHROME("monochrome"),
   MONOCHROME_DARK("monochrome-dark"),
@@ -17,6 +22,9 @@ public enum SchemeMode {
     this.value = value;
   }
 
+  /**
+   * Returns the route-compatible lowercase mode token.
+   */
   public String value() {
     return value;
   }

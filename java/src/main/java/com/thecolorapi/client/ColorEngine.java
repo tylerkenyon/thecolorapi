@@ -5,7 +5,6 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -14,6 +13,12 @@ import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * Internal local color computation engine.
+ *
+ * <p>This class ports the behavior used by the legacy JavaScript implementation and returns API-shaped maps so
+ * downstream integrations can remain compatible while running fully offline.</p>
+ */
 final class ColorEngine {
   private static final SecureRandom RANDOM = new SecureRandom();
   private static final List<NamedColor> NAMED_COLORS = loadNamedColors();
@@ -21,6 +26,9 @@ final class ColorEngine {
   private ColorEngine() {
   }
 
+  /**
+   * Resolves a color payload map from a typed query.
+   */
   static Map<String, Object> colorMe(ColorQuery query) {
     Objects.requireNonNull(query, "query is required");
 
@@ -61,6 +69,9 @@ final class ColorEngine {
     };
   }
 
+  /**
+   * Generates a scheme payload map from a seed color payload.
+   */
   static Map<String, Object> scheme(SchemeMode mode, int count, Map<String, Object> seed) {
     if (count <= 0) {
       throw new IllegalArgumentException("count must be greater than 0");
@@ -104,6 +115,9 @@ final class ColorEngine {
     return response;
   }
 
+  /**
+   * Renders a single-color SVG box.
+   */
   static String colorBoxSvg(Map<String, Object> color, Integer width, Integer height, Boolean named) {
     int w = width == null ? 100 : width;
     int h = height == null ? 100 : height;
@@ -122,6 +136,9 @@ final class ColorEngine {
         + "</svg>";
   }
 
+  /**
+   * Renders a scheme SVG box with one row per generated color.
+   */
   static String schemeBoxSvg(Map<String, Object> scheme, Integer width, Integer height, Boolean named) {
     int w = width == null ? 100 : width;
     int h = height == null ? 200 : height;
@@ -150,6 +167,9 @@ final class ColorEngine {
     return sb.toString();
   }
 
+  /**
+   * Generates a random hex color string.
+   */
   static String randomHex() {
     String letters = "0123456789ABCDEF";
     StringBuilder color = new StringBuilder("#");

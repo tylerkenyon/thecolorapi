@@ -3,6 +3,7 @@ package com.thecolorapi.client;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
@@ -46,6 +47,30 @@ class ColorApiClientTest {
   }
 
   @Test
+  void identifyFromQueryMatchesLegacyPrecedence() {
+    Map<String, Object> color = client.identifyFromQuery("0047AB", "rgb(255,0,0)", "hsl(215,100,34)", "cmyk(100,58,0,33)", "hsv(215,100,67)");
+    assertEquals("#FF0000", castMap(color.get("hex")).get("value"));
+
+    Map<String, Object> hexOnly = client.identifyFromQuery("0047AB", null, null, null, null);
+    assertEquals("#0047AB", castMap(hexOnly.get("hex")).get("value"));
+  }
+
+  @Test
+  void unknownTypeParsingSupportsLegacyFormats() {
+    Map<String, Object> fromRgb = client.identifyUnknown("rgb(0,71,171)");
+    Map<String, Object> fromHex = client.identifyUnknown("0047AB");
+    Map<String, Object> fromHsl = client.identifyUnknown("hsl(215,100,34)");
+    Map<String, Object> fromHsv = client.identifyUnknown("hsv(215,100,67)");
+    Map<String, Object> fromCmyk = client.identifyUnknown("cmyk(100,58,0,33)");
+
+    assertEquals("#0047AB", castMap(fromRgb.get("hex")).get("value"));
+    assertEquals("#0047AB", castMap(fromHex.get("hex")).get("value"));
+    assertTrue(castMap(fromHsl.get("hex")).get("value").toString().matches("^#[0-9A-F]{6}$"));
+    assertTrue(castMap(fromHsv.get("hex")).get("value").toString().matches("^#[0-9A-F]{6}$"));
+    assertTrue(castMap(fromCmyk.get("hex")).get("value").toString().matches("^#[0-9A-F]{6}$"));
+  }
+
+  @Test
   void schemeReturnsRequestedColorCount() {
     Map<String, Object> scheme = client.schemeByHex("0047AB", SchemeMode.TRIAD, 6);
 
@@ -57,6 +82,11 @@ class ColorApiClientTest {
 
     Map<String, Object> seed = castMap(scheme.get("seed"));
     assertEquals("#0047AB", castMap(seed.get("hex")).get("value"));
+
+    Map<String, Object> links = castMap(scheme.get("_links"));
+    Map<String, Object> schemes = castMap(links.get("schemes"));
+    assertTrue(schemes.containsKey("monochrome"));
+    assertTrue(schemes.containsKey("advanced"));
   }
 
   @Test
@@ -91,6 +121,12 @@ class ColorApiClientTest {
   void randomHexLooksValid() {
     String hex = client.randomHex();
     assertTrue(hex.matches("^#[0-9A-F]{6}$"));
+  }
+
+  @Test
+  void invalidUnknownInputThrows() {
+    IllegalArgumentException error = assertThrows(IllegalArgumentException.class, () -> client.identifyUnknown("not-a-color"));
+    assertTrue(error.getMessage().contains("Could not infer input type"));
   }
 
   @SuppressWarnings("unchecked")
