@@ -776,9 +776,9 @@ final class ColorEngine {
 
   private static String unescapeJson(String value) {
     return value
-        .replace("\\\\\"", "\"")
-        .replace("\\\\/", "/")
-        .replace("\\\\\\\\", "\\");
+        .replace("\\\"", "\"")
+        .replace("\\/", "/")
+        .replace("\\\\", "\\");
   }
 
   private record NamedColor(String hex, String name, int r, int g, int b, int h, int s, int l) {
