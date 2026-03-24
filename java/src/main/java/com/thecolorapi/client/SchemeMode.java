@@ -8,7 +8,8 @@ public enum SchemeMode {
   COMPLEMENT("complement"),
   ANALOGIC_COMPLEMENT("analogic-complement"),
   TRIAD("triad"),
-  QUAD("quad");
+  QUAD("quad"),
+  ADVANCED("advanced");
 
   private final String value;
 

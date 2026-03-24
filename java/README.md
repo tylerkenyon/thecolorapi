@@ -1,16 +1,29 @@
-# thecolorapi-java (Java 21 Maven Library)
+# thecolorapi-java (Java 21 Local Library)
 
-`thecolorapi-java` is a Java helper library that mirrors the existing The Color API HTTP surface 1:1 and is designed for Java 21 projects using Maven.
+This module is now a **fully local Java 21 library**.
 
-It provides helper methods for all existing API routes:
+It does not call `https://www.thecolorapi.com` for color computation. Instead, it ports the core JavaScript logic from:
 
-- `/id`
-- `/scheme`
-- `/colorbox`
-- `/schemebox`
-- `/random`
+- `/home/runner/work/thecolorapi/thecolorapi/lib/colored.js`
+- `/home/runner/work/thecolorapi/thecolorapi/lib/schemer.js`
+- `/home/runner/work/thecolorapi/thecolorapi/lib/cutils.js`
 
-## Maven setup
+## What is local now
+
+- Color identification payload generation (`/id` equivalent)
+  - hex/rgb/hsl/hsv/cmyk input support
+  - rgb/hsl/hsv/cmyk/XYZ output sections
+  - nearest color-name lookup using local `colorNames.json`
+  - contrast recommendation (`#000000` or `#FFFFFF`)
+- Scheme generation (`/scheme` equivalent)
+  - `monochrome`, `monochrome-dark`, `monochrome-light`, `analogic`, `complement`, `analogic-complement`, `triad`, `quad`
+  - plus `advanced` mode for richer palette behavior
+- SVG rendering helpers
+  - `colorBoxSvg` (`/colorbox` equivalent)
+  - `schemeBoxSvg` (`/schemebox` equivalent)
+- Random color generation (`/random` equivalent as local `randomHex()`)
+
+## Maven usage
 
 From `/home/runner/work/thecolorapi/thecolorapi/java`:
 
@@ -19,98 +32,39 @@ mvn clean test
 mvn clean package
 ```
 
-To install locally:
-
-```bash
-mvn clean install
-```
-
 ## Java version
 
-This module targets Java 21.
+Targets Java 21.
 
-```xml
-<maven.compiler.source>21</maven.compiler.source>
-<maven.compiler.target>21</maven.compiler.target>
-```
-
-## API helper usage
+## API usage
 
 ```java
 import com.thecolorapi.client.ColorApiClient;
-import com.thecolorapi.client.ColorApiResponse;
+import com.thecolorapi.client.ColorQuery;
 import com.thecolorapi.client.SchemeMode;
 
 ColorApiClient client = new ColorApiClient();
 
-// /id helpers
-ColorApiResponse byHex = client.identifyByHex("0047AB");
-ColorApiResponse byRgb = client.identifyByRgb(0, 71, 171);
-ColorApiResponse byHsl = client.identifyByHsl(215, 100, 34);
-ColorApiResponse byHsv = client.identifyByHsv(215, 100, 67);
-ColorApiResponse byCmyk = client.identifyByCmyk(100, 58, 0, 33);
+// /id equivalent
+var color = client.identifyByHex("0047AB");
+var byRgb = client.identifyByRgb(0, 71, 171);
 
-// /scheme helper
-ColorApiResponse scheme = client.schemeByHex("0047AB", SchemeMode.TRIAD, 6);
+// /scheme equivalent
+var triad = client.schemeByHex("0047AB", SchemeMode.TRIAD, 6);
 
-// /colorbox URL helper
-var colorBox = client.colorBoxUri(
-    com.thecolorapi.client.ColorQuery.hex("0047AB"),
-    350,
-    350,
-    true
-);
+// advanced scheme mode
+var advanced = client.advancedSchemeByHex("0047AB", 8);
 
-// /schemebox URL helper
-var schemeBox = client.schemeBoxUri(
-    com.thecolorapi.client.ColorQuery.hex("0047AB"),
-    SchemeMode.MONOCHROME,
-    5,
-    350,
-    350,
-    true
-);
+// /colorbox and /schemebox equivalents (SVG strings)
+String colorSvg = client.colorBoxSvg(ColorQuery.hex("0047AB"), 120, 80, true);
+String schemeSvg = client.schemeBoxSvg(ColorQuery.hex("0047AB"), SchemeMode.MONOCHROME, 5, 120, 220, false);
 
-// /random URL helper
-var random = client.randomColorUri();
+// /random equivalent
+String randomHex = client.randomHex();
 ```
-
-## Helper classes
-
-- `ColorApiClient`: main client and route-specific helpers
-- `ColorApiResponse`: immutable record containing `statusCode`, `body`, and `uri`
-- `ColorQuery`: input builder for `hex`, `rgb`, `hsl`, `hsv`, `cmyk`
-- `SchemeMode`: enum matching API modes (`monochrome`, `triad`, etc.)
-
-## 1:1 route and query mapping
-
-### `/id`
-
-- `identifyByHex(hex)` -> `/id?hex=...`
-- `identifyByRgb(r,g,b)` -> `/id?rgb=r,g,b`
-- `identifyByHsl(h,s,l)` -> `/id?hsl=h,s,l`
-- `identifyByHsv(h,s,v)` -> `/id?hsv=h,s,v`
-- `identifyByCmyk(c,m,y,k)` -> `/id?cmyk=c,m,y,k`
-
-### `/scheme`
-
-- `schemeByHex(hex, mode, count)` -> `/scheme?hex=...&mode=...&count=...`
-- `scheme(colorQuery, mode, count)` supports all `ColorQuery` inputs and optional `format`
-
-### `/colorbox`
-
-- `colorBoxUri(colorQuery, width, height, named)` -> `/colorbox?...`
-
-### `/schemebox`
-
-- `schemeBoxUri(colorQuery, mode, count, width, height, named)` -> `/schemebox?...`
-
-### `/random`
-
-- `randomColorUri()` -> `/random`
 
 ## Notes
 
-- URL query values are UTF-8 encoded.
-- Dimension and count helpers validate that values are greater than zero.
-- The `format` parameter can be passed to `identify(..., format)` and `scheme(..., format)` to mirror API behavior (`json`, `html`, `svg`).
+- `ColorEngine` contains the local ported logic and data shaping.
+- `colorNames.json` is loaded from `java/src/main/resources/colorNames.json`.
+- For strict parity, output map keys match the existing API-style payload shape (`hex`, `rgb`, `hsl`, `hsv`, `cmyk`, `XYZ`, `name`, `contrast`, `image`, `_links`, `_embedded`).
