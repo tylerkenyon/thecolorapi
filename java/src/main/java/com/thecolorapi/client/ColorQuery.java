@@ -1,82 +1,67 @@
 package com.thecolorapi.client;
 
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 
 public final class ColorQuery {
-  private final String hex;
-  private final String rgb;
-  private final String hsl;
-  private final String cmyk;
-  private final String hsv;
+  enum Type {
+    HEX,
+    RGB,
+    HSL,
+    HSV,
+    CMYK
+  }
 
-  private ColorQuery(String hex, String rgb, String hsl, String cmyk, String hsv) {
+  private final Type type;
+  private final String hex;
+  private final Map<String, Double> values;
+  private final boolean fraction;
+
+  private ColorQuery(Type type, String hex, Map<String, Double> values, boolean fraction) {
+    this.type = type;
     this.hex = hex;
-    this.rgb = rgb;
-    this.hsl = hsl;
-    this.cmyk = cmyk;
-    this.hsv = hsv;
+    this.values = values;
+    this.fraction = fraction;
   }
 
   public static ColorQuery hex(String hex) {
-    return new ColorQuery(requireNonBlank(hex, "hex"), null, null, null, null);
-  }
-
-  public static ColorQuery rgb(String rgb) {
-    return new ColorQuery(null, requireNonBlank(rgb, "rgb"), null, null, null);
+    return new ColorQuery(Type.HEX, requireNonBlank(hex, "hex"), null, false);
   }
 
   public static ColorQuery rgb(int r, int g, int b) {
-    return rgb("%d,%d,%d".formatted(r, g, b));
-  }
-
-  public static ColorQuery hsl(String hsl) {
-    return new ColorQuery(null, null, requireNonBlank(hsl, "hsl"), null, null);
+    return new ColorQuery(Type.RGB, null, Map.of("r", (double) r, "g", (double) g, "b", (double) b), false);
   }
 
   public static ColorQuery hsl(int h, int s, int l) {
-    return hsl("%d,%d,%d".formatted(h, s, l));
-  }
-
-  public static ColorQuery cmyk(String cmyk) {
-    return new ColorQuery(null, null, null, requireNonBlank(cmyk, "cmyk"), null);
-  }
-
-  public static ColorQuery cmyk(int c, int m, int y, int k) {
-    return cmyk("%d,%d,%d,%d".formatted(c, m, y, k));
-  }
-
-  public static ColorQuery hsv(String hsv) {
-    return new ColorQuery(null, null, null, null, requireNonBlank(hsv, "hsv"));
+    return new ColorQuery(Type.HSL, null, Map.of("h", (double) h, "s", (double) s, "l", (double) l), false);
   }
 
   public static ColorQuery hsv(int h, int s, int v) {
-    return hsv("%d,%d,%d".formatted(h, s, v));
+    return new ColorQuery(Type.HSV, null, Map.of("h", (double) h, "s", (double) s, "v", (double) v), false);
   }
 
-  public Map<String, String> toParams() {
-    Map<String, String> params = new LinkedHashMap<>();
-    if (hex != null) {
-      params.put("hex", hex);
-    }
-    if (rgb != null) {
-      params.put("rgb", rgb);
-    }
-    if (hsl != null) {
-      params.put("hsl", hsl);
-    }
-    if (cmyk != null) {
-      params.put("cmyk", cmyk);
-    }
-    if (hsv != null) {
-      params.put("hsv", hsv);
-    }
-    return params;
+  public static ColorQuery cmyk(int c, int m, int y, int k) {
+    return new ColorQuery(Type.CMYK, null, Map.of("c", (double) c, "m", (double) m, "y", (double) y, "k", (double) k), false);
   }
 
-  boolean isEmpty() {
-    return hex == null && rgb == null && hsl == null && cmyk == null && hsv == null;
+  public static ColorQuery hslFraction(double h, double s, double l) {
+    return new ColorQuery(Type.HSL, null, Map.of("h", h, "s", s, "l", l), true);
+  }
+
+  Type type() {
+    return type;
+  }
+
+  String hex() {
+    return hex;
+  }
+
+  Map<String, Double> values() {
+    return values;
+  }
+
+  boolean fraction() {
+    return fraction;
   }
 
   private static String requireNonBlank(String value, String field) {

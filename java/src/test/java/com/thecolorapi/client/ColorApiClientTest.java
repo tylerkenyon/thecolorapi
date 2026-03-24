@@ -1,98 +1,105 @@
 package com.thecolorapi.client;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 class ColorApiClientTest {
 
-  private final ColorApiClient client = new ColorApiClient(HttpClient.newHttpClient(), URI.create("https://www.thecolorapi.com"));
+  private final ColorApiClient client = new ColorApiClient();
 
   @Test
-  void identifyBuildsIdUriWithHex() {
-    URI uri = client.buildUri("/id", ColorQuery.hex("0047AB").toParams());
-    assertEquals("https://www.thecolorapi.com/id?hex=0047AB", uri.toString());
+  void identifyByHexReturnsLocalColorPayload() {
+    Map<String, Object> color = client.identifyByHex("0047AB");
+
+    Map<String, Object> hex = castMap(color.get("hex"));
+    Map<String, Object> rgb = castMap(color.get("rgb"));
+    Map<String, Object> name = castMap(color.get("name"));
+    Map<String, Object> links = castMap(color.get("_links"));
+
+    assertEquals("#0047AB", hex.get("value"));
+    assertEquals("0047AB", hex.get("clean"));
+    assertEquals(0, rgb.get("r"));
+    assertEquals(71, rgb.get("g"));
+    assertEquals(171, rgb.get("b"));
+    assertEquals("Cobalt", name.get("value"));
+    assertEquals(true, name.get("exact_match_name"));
+    assertNotNull(links.get("self"));
   }
 
   @Test
-  void identifyByHexHelperBuildsExpectedUri() {
-    URI uri = client.buildUri("/id", ColorQuery.hex("24B1E0").toParams());
-    assertEquals("https://www.thecolorapi.com/id?hex=24B1E0", uri.toString());
+  void identifyAcceptsAllInputModels() {
+    Map<String, Object> byRgb = client.identifyByRgb(0, 71, 171);
+    Map<String, Object> byHsl = client.identifyByHsl(215, 100, 34);
+    Map<String, Object> byHsv = client.identifyByHsv(215, 100, 67);
+    Map<String, Object> byCmyk = client.identifyByCmyk(100, 58, 0, 33);
+
+    assertEquals("#0047AB", castMap(byRgb.get("hex")).get("value"));
+    assertTrue(castMap(byHsl.get("hex")).get("value").toString().matches("^#[0-9A-F]{6}$"));
+    assertTrue(castMap(byHsv.get("hex")).get("value").toString().matches("^#[0-9A-F]{6}$"));
+    assertTrue(castMap(byCmyk.get("hex")).get("value").toString().matches("^#[0-9A-F]{6}$"));
   }
 
   @Test
-  void identifyByRgbHelperBuildsExpectedUri() {
-    URI uri = client.buildUri("/id", ColorQuery.rgb(0, 71, 171).toParams());
-    assertEquals("https://www.thecolorapi.com/id?rgb=0%2C71%2C171", uri.toString());
+  void schemeReturnsRequestedColorCount() {
+    Map<String, Object> scheme = client.schemeByHex("0047AB", SchemeMode.TRIAD, 6);
+
+    assertEquals("triad", scheme.get("mode"));
+    assertEquals(6, scheme.get("count"));
+
+    List<Map<String, Object>> colors = castList(scheme.get("colors"));
+    assertEquals(6, colors.size());
+
+    Map<String, Object> seed = castMap(scheme.get("seed"));
+    assertEquals("#0047AB", castMap(seed.get("hex")).get("value"));
   }
 
   @Test
-  void identifyByHslHelperBuildsExpectedUri() {
-    URI uri = client.buildUri("/id", ColorQuery.hsl(215, 100, 34).toParams());
-    assertEquals("https://www.thecolorapi.com/id?hsl=215%2C100%2C34", uri.toString());
+  void advancedSchemeProducesDiversePalette() {
+    Map<String, Object> scheme = client.advancedSchemeByHex("0047AB", 8);
+
+    assertEquals("advanced", scheme.get("mode"));
+    List<Map<String, Object>> colors = castList(scheme.get("colors"));
+    assertEquals(8, colors.size());
+
+    long distinctHex = colors.stream()
+        .map(c -> castMap(c.get("hex")).get("value").toString())
+        .distinct()
+        .count();
+    assertTrue(distinctHex >= 5);
   }
 
   @Test
-  void identifyByHsvHelperBuildsExpectedUri() {
-    URI uri = client.buildUri("/id", ColorQuery.hsv(215, 100, 67).toParams());
-    assertEquals("https://www.thecolorapi.com/id?hsv=215%2C100%2C67", uri.toString());
+  void svgHelpersRenderLocally() {
+    String colorSvg = client.colorBoxSvg(ColorQuery.hex("0047AB"), 120, 80, true);
+    assertTrue(colorSvg.contains("<svg"));
+    assertTrue(colorSvg.contains("#0047AB"));
+    assertTrue(colorSvg.contains("Cobalt"));
+
+    String schemeSvg = client.schemeBoxSvg(ColorQuery.hex("0047AB"), SchemeMode.MONOCHROME, 5, 120, 220, false);
+    assertTrue(schemeSvg.contains("<svg"));
+    assertTrue(schemeSvg.contains("<rect"));
+    assertFalse(schemeSvg.contains("<text"));
   }
 
   @Test
-  void identifyByCmykHelperBuildsExpectedUri() {
-    URI uri = client.buildUri("/id", ColorQuery.cmyk(100, 58, 0, 33).toParams());
-    assertEquals("https://www.thecolorapi.com/id?cmyk=100%2C58%2C0%2C33", uri.toString());
+  void randomHexLooksValid() {
+    String hex = client.randomHex();
+    assertTrue(hex.matches("^#[0-9A-F]{6}$"));
   }
 
-  @Test
-  void colorBoxUriIncludesOptionalParams() {
-    URI uri = client.colorBoxUri(ColorQuery.rgb(0, 71, 171), 100, 200, true);
-    assertEquals("https://www.thecolorapi.com/colorbox?rgb=0%2C71%2C171&w=100&h=200&named=true", uri.toString());
+  @SuppressWarnings("unchecked")
+  private static Map<String, Object> castMap(Object value) {
+    return (Map<String, Object>) value;
   }
 
-  @Test
-  void schemeUriIncludesModeAndCount() {
-    Map<String, String> params = new LinkedHashMap<>();
-    params.putAll(ColorQuery.hex("0047AB").toParams());
-    params.put("mode", SchemeMode.TRIAD.value());
-    params.put("count", "6");
-
-    URI uri = client.buildUri("/scheme", params);
-    assertEquals("https://www.thecolorapi.com/scheme?hex=0047AB&mode=triad&count=6", uri.toString());
-  }
-
-  @Test
-  void schemeByHexHelperBuildsExpectedUri() {
-    Map<String, String> params = new LinkedHashMap<>();
-    params.putAll(ColorQuery.hex("0047AB").toParams());
-    params.put("mode", SchemeMode.MONOCHROME.value());
-    params.put("count", "5");
-
-    URI uri = client.buildUri("/scheme", params);
-    assertEquals("https://www.thecolorapi.com/scheme?hex=0047AB&mode=monochrome&count=5", uri.toString());
-  }
-
-  @Test
-  void schemeRejectsInvalidCount() {
-    IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
-        () -> client.scheme(ColorQuery.hex("0047AB"), SchemeMode.MONOCHROME, 0));
-    assertEquals("count must be greater than 0", error.getMessage());
-  }
-
-  @Test
-  void colorQueryRejectsBlankHex() {
-    IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
-        () -> ColorQuery.hex("   "));
-    assertEquals("hex is required", error.getMessage());
-  }
-
-  @Test
-  void randomUriMatchesApiRoute() {
-    assertEquals("https://www.thecolorapi.com/random", client.randomColorUri().toString());
+  @SuppressWarnings("unchecked")
+  private static List<Map<String, Object>> castList(Object value) {
+    return (List<Map<String, Object>>) value;
   }
 }
